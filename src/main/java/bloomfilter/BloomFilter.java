@@ -162,7 +162,7 @@ public class BloomFilter
 		
 		int c = this.containsWords(w, false);
 		
-		System.out.println("c: " + c/(double) w.length);
+		System.out.println("unknown false positive: " + c/(double) w.length);
 	}
 	
 	private void runWithValidation(String[][] dataSet)
