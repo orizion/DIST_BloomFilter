@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.Collections;
 import java.util.List;
+import java.util.Random;
 import java.util.Scanner;
 
 import com.google.common.hash.HashCode;
@@ -53,6 +54,8 @@ public class BloomFilter
 	 */
 	private static final int P_TEST_SET_KNOWN = 50;
 	
+	private final static Random shuffleRandom = new Random(1);
+	
 	/**
 	 * 
 	 */
@@ -64,7 +67,7 @@ public class BloomFilter
 		this.m = this.optimalFiltersize(n,p);
 		this.k = this.optimalNumberOfHashfunctions(this.m,n);
 		
-		this.filter = new BitSet(); 
+		this.filter = new BitSet(this.m); 
 		
 		this.hashFunctions = new HashFunction[this.k];
 		for(int seed=0;seed<this.k;seed++)
@@ -77,7 +80,7 @@ public class BloomFilter
 	public static void main(String[] args)
 	{
 		String filename = "words.txt";
-		double p = 0.001;
+		double p = 0.1;
 		
 		boolean crossValidation = true;
 		
@@ -97,9 +100,8 @@ public class BloomFilter
 		
 		BloomFilter bloomFilter = new BloomFilter(n, p);
 		
-		System.out.println("Bloom filter before run: " + bloomFilter.toString());
 		bloomFilter.run(dataSet);
-		System.out.println("Bloom filter after run: " + bloomFilter.toString());
+		System.out.println("Bloom filter: " + bloomFilter.toString());
 	}
 	
 	public void addWord(CharSequence word)
@@ -150,6 +152,17 @@ public class BloomFilter
 		assert(dataSet.length==1);
 		
 		this.addWords(dataSet[0]);
+		
+		String[] w = new String[dataSet[0].length];
+		
+		for(int i=0;i<w.length;i++)
+		{
+			w[i] = dataSet[0][i]+"a";
+		}
+		
+		int c = this.containsWords(w, false);
+		
+		System.out.println("c: " + c/(double) w.length);
 	}
 	
 	private void runWithValidation(String[][] dataSet)
@@ -163,7 +176,7 @@ public class BloomFilter
 		int known = this.containsWords(dataSet[2], true);
 		
 		System.out.println("unknown false positive: " + unknown/(double) dataSet[0].length);
-		System.out.println("(known false positive: " + known/(double) dataSet[2].length+")");
+		System.out.println("(known true positive: " + known/(double) dataSet[2].length+")");
 
 	}
 	
@@ -179,14 +192,13 @@ public class BloomFilter
 	
 	private int containsWords(String[] words, boolean contains)
 	{
-		//TODO Test this
 		int counter = 0;
 		
 		for(String word:words)
 		{
 			boolean result = this.contains(word);
 			
-			if(result!=contains)
+			if(result==contains)
 			{
 				counter++;
 			}
@@ -270,7 +282,7 @@ public class BloomFilter
 		wordLists[1] = new String[sizeSetKnown];
 		wordLists[2] = new String[sizeTestKnown];
 		
-		Collections.shuffle(words);
+		Collections.shuffle(words, shuffleRandom);
 		
 		int i =0;
 		for(;i<sizeTestSetUnknown;i++)
@@ -302,10 +314,14 @@ public class BloomFilter
 //		filter.or(set);
 	
 //Variante 2
-		int hash = code.asInt(); //hash can be negative or positive
-		int modHash = Math.abs(hash)%this.m; //make sure hash is in range of bitSet (0<=modHash<m)
+//		int hash = code.asInt(); //hash can be negative or positive
+//		int modHash = Math.abs(hash)%this.m; //make sure hash is in range of bitSet (0<=modHash<m)
+//		
+//		filter.set(modHash);
 		
-		filter.set(modHash);
+		long h = code.asLong();
+		int modeHash = (int) Math.abs(h%this.m);
+		filter.set(modeHash);
 		
 		assert(filter.length()<=this.m);
 	}
@@ -318,12 +334,12 @@ public class BloomFilter
 	
 	private int optimalNumberOfHashfunctions(int m, int n)
 	{
-		return (int) ((m/(double) n)*Math.log(2));
+		return (int) Math.ceil(((m/(double) n)*Math.log(2)));
 	}
 	
 	@Override
 	public String toString()
 	{
-		return "n=" + this.n + " p=" + this.p +" k=" + this.k + " m= "+ this.m + "set size = " + this.filter.length(); //+" bitSet: " + this.filter;
+		return "n=" + this.n + " p=" + this.p +" k=" + this.k + " m= "+ this.m + " set size = " + this.filter.length(); //+" bitSet: " + this.filter;
 	}
 }
