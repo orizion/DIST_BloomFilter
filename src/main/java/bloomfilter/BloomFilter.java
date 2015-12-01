@@ -82,6 +82,8 @@ public class BloomFilter
 		String filename = "words.txt";
 		double p = 0.1;
 		
+		assert(p>=0 && p<=1);
+		
 		boolean crossValidation = true;
 		
 		String[][] dataSet;
