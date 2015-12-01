@@ -56,9 +56,9 @@ public class BloomFilter
 	
 	private final static Random shuffleRandom = new Random(1);
 	
-	/**
-	 * 
-	 */
+	 /**
+     * Die Hashfunktionen werden generiert und die optimale Filtergrösse berechnet
+     */
 	public BloomFilter(int n, double p) 
 	{
 		this.n = n;
@@ -105,7 +105,11 @@ public class BloomFilter
 		bloomFilter.run(dataSet);
 		System.out.println("Bloom filter: " + bloomFilter.toString());
 	}
-	
+	/**
+     * Fügt ein einzelnes Wort dem Bloom Filter hinzu
+     * 
+     * @param word
+     */
 	public void addWord(CharSequence word)
 	{
 		for(HashFunction function : this.hashFunctions)
@@ -192,6 +196,13 @@ public class BloomFilter
 		return BloomFilter.readWords(dictionaryFile, true);
 	}
 	
+	 /**
+     * Prüft ob die Wörter im Bloom Filter vorhanden sind
+     * 
+     * @param words
+     * @param contains
+     * @return
+     */
 	private int containsWords(String[] words, boolean contains)
 	{
 		int counter = 0;
@@ -209,6 +220,11 @@ public class BloomFilter
 		return counter;
 	}
 	
+	/**
+     * Fügt die Wörter dem Filter hinzu
+     * 
+     * @param words
+     */
 	private void addWords(String[] words)
 	{
 		for(String word:words)
@@ -217,6 +233,13 @@ public class BloomFilter
 		}
 	}
 	
+	/**
+     * Liest die Wörter aus der Txt Datei und speichert sie
+     * 
+     * @param dictionaryFile
+     * @param crossValidation
+     * @return
+     */
 	private static String[][] readWords(String dictionaryFile, boolean crossValidation)
 	{
 		Scanner scanner = null;
@@ -304,23 +327,16 @@ public class BloomFilter
 		
 		return wordLists;
 	}
-	
+	 /**
+     * Berechnet den Modulo m des Hashcodes und setzt an der entsprechenden Stelle (Hasho mod m) im
+     * BitSet eine 1
+     * 
+     * @param code Der generierte Hashcode
+     * @param filter das Bitset, welches den Bloom-Filter repräsentiert
+     */
 	private void applyHashCodeOnFilter(HashCode code, BitSet filter)
 	{
-		//TODO: Test this!
-		
-//Variante 1 (funktioniert nicht)
-//		byte[] byteHash = code.asBytes();
-//		BitSet set = BitSet.valueOf(byteHash);
-//		
-//		filter.or(set);
-	
-//Variante 2
-//		int hash = code.asInt(); //hash can be negative or positive
-//		int modHash = Math.abs(hash)%this.m; //make sure hash is in range of bitSet (0<=modHash<m)
-//		
-//		filter.set(modHash);
-		
+
 		long h = code.asLong();
 		int modeHash = (int) Math.abs(h%this.m);
 		filter.set(modeHash);
@@ -328,12 +344,13 @@ public class BloomFilter
 		assert(filter.length()<=this.m);
 	}
 	
-	
+	// https://en.wikipedia.org/wiki/Bloom_filter#Optimal_number_of_hash_functions
 	private int optimalFiltersize(int n, double p)
 	{
 		return (int) (-(n*Math.log(p))/(Math.pow(Math.log(2),2)));
 	}
 	
+	// https://en.wikipedia.org/wiki/Bloom_filter#Optimal_number_of_hash_functions
 	private int optimalNumberOfHashfunctions(int m, int n)
 	{
 		return (int) Math.ceil(((m/(double) n)*Math.log(2)));
