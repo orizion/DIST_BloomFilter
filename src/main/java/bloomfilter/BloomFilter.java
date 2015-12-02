@@ -104,6 +104,7 @@ public class BloomFilter
 		
 		bloomFilter.run(dataSet);
 		System.out.println("Bloom filter: " + bloomFilter.toString());
+
 	}
 	/**
      * Fügt ein einzelnes Wort dem Bloom Filter hinzu
@@ -119,6 +120,7 @@ public class BloomFilter
 		}
 	}
 	
+
 	/**
 	 * 
 	 * @param word
@@ -126,7 +128,7 @@ public class BloomFilter
 	 */
 	public boolean contains(CharSequence word)
 	{
-		BitSet set = new BitSet();
+		BitSet set = new BitSet(this.m);
 		
 		for(HashFunction function : this.hashFunctions)
 		{
@@ -134,9 +136,13 @@ public class BloomFilter
 			this.applyHashCodeOnFilter(hashCode,set);
 		}
 		
-		return this.filter.intersects(set);
+		int bits = set.cardinality();
+		set.and(this.filter);
+		
+		return bits==set.cardinality();
+		
 	}
-	
+
 	public void run(String[][] dataSet)
 	{
 		if(dataSet.length==1)
@@ -163,10 +169,10 @@ public class BloomFilter
 		
 		for(int i=0;i<w.length;i++)
 		{
-			w[i] = dataSet[0][i]+"a";
+			w[i] = dataSet[0][i]+"aajsoisjf";
 		}
 		
-		int c = this.containsWords(w, false);
+		int c = this.containsWords(w, true);
 		
 		System.out.println("unknown false positive: " + c/(double) w.length);
 	}
@@ -178,7 +184,7 @@ public class BloomFilter
 		
 		this.addWords(dataSet[1]);
 		
-		int unknown = this.containsWords(dataSet[0], false);
+		int unknown = this.containsWords(dataSet[0], true);
 		int known = this.containsWords(dataSet[2], true);
 		
 		System.out.println("unknown false positive: " + unknown/(double) dataSet[0].length);
