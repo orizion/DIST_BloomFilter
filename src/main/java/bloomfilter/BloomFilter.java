@@ -32,6 +32,9 @@ public class BloomFilter
 	 */
 	private final int n;
 	
+	/**
+	 * probability of false positive results
+	 */
 	private final double p;
 	
 	/**
@@ -42,7 +45,7 @@ public class BloomFilter
 	private BitSet filter;
 	private HashFunction[] hashFunctions;
 	
-	//Cross validation parameters
+	//Validation parameters
 	
 	/**
 	 * Percentage of all words in test set as "unknown words"
@@ -56,11 +59,15 @@ public class BloomFilter
 	
 	private final static Random shuffleRandom = new Random(1);
 	
-	 /**
-     * Die Hashfunktionen werden generiert und die optimale Filtergrösse berechnet
-     */
+	/**
+	 * Initialize the filter with an optimal filtersize {@code m} and an optimal number of hashfunctions {@code k} and generates {@code k} hashfunctions.
+	 * @param n number of expected elements in the filter
+	 * @param p probability of false positive results. {@code 0<=p<=1}
+	 */
 	public BloomFilter(int n, double p) 
 	{
+		assert(p>=0 && p<=1);
+		
 		this.n = n;
 		this.p = p;
 		
@@ -81,10 +88,8 @@ public class BloomFilter
 	{
 		String filename = "words.txt";
 		double p = 0.1;
-		
-		assert(p>=0 && p<=1);
-		
 		boolean crossValidation = true;
+		
 		
 		String[][] dataSet;
 		int n;
@@ -106,11 +111,11 @@ public class BloomFilter
 		System.out.println("Bloom filter: " + bloomFilter.toString());
 
 	}
+	
 	/**
-     * Fügt ein einzelnes Wort dem Bloom Filter hinzu
-     * 
-     * @param word
-     */
+	 * Adds a single word to the bloom filter by calculating {@code k} indices with {@code k} hashfunctions
+	 * @param word to add to the bloom filter
+	 */
 	public void addWord(CharSequence word)
 	{
 		for(HashFunction function : this.hashFunctions)
@@ -119,12 +124,11 @@ public class BloomFilter
 			this.applyHashCodeOnFilter(hashCode,this.filter );
 		}
 	}
-	
 
 	/**
-	 * 
-	 * @param word
-	 * @return true if <i>word</i> may exist in filter<br> false if<i>word</i> does not exist in filter
+	 * Checks if a given word exists in the filter or not. 
+	 * @param word word to check
+	 * @return true if <i>word</i> may exist in filter with a given probability of {@code 1-p}<br> false if<i>word</i> does not exist in filter
 	 */
 	public boolean contains(CharSequence word)
 	{
@@ -136,13 +140,17 @@ public class BloomFilter
 			this.applyHashCodeOnFilter(hashCode,set);
 		}
 		
-		int bits = set.cardinality();
-		set.and(this.filter);
+		int bits = set.cardinality(); 	//counting number of set bits.
+		set.and(this.filter);			
 		
-		return bits==set.cardinality();
+		return bits==set.cardinality(); //returns true if and only if number of set bits hasn't changed. 
 		
 	}
 
+	/**
+	 * 
+	 * @param dataSet could be a rather {@code 1 x N} array (without validation) or a {@code 3 x N} array (with validation)
+	 */
 	public void run(String[][] dataSet)
 	{
 		if(dataSet.length==1)
@@ -172,7 +180,7 @@ public class BloomFilter
 			w[i] = dataSet[0][i]+"aajsoisjf";
 		}
 		
-		int c = this.containsWords(w, true);
+		int c = this.containsWords(w, true); //should be around p
 		
 		System.out.println("unknown false positive: " + c/(double) w.length);
 	}
@@ -187,28 +195,45 @@ public class BloomFilter
 		int unknown = this.containsWords(dataSet[0], true);
 		int known = this.containsWords(dataSet[2], true);
 		
-		System.out.println("unknown false positive: " + unknown/(double) dataSet[0].length);
-		System.out.println("(known true positive: " + known/(double) dataSet[2].length+")");
+		System.out.println("unknown false positive: " + unknown/(double) dataSet[0].length); //should be around p
+		System.out.println("(known true positive: " + known/(double) dataSet[2].length+")"); //should always be 1
 
 	}
-	
+
+	/**
+	 * Reads all words of a dictionary file into a {@code 1 x N} array for running bloom filter without validation.
+	 * @param dictionaryFile filename of the dictionary file
+	 * @return a {@code 1 x N} array with {@code N=number of lines/words}}
+	 * 
+	 * @see #readWithValidation(String)
+	 * @see BloomFilter#readWords(String, boolean)
+	 */
 	public static String[][] read(String dictionaryFile)
 	{
 		return BloomFilter.readWords(dictionaryFile, false);
 	}
 	
+	/**
+	 * Reads all words of a dictionary file into a {@code 3 x N} array for running bloom filter with validation.
+	 * @param dictionaryFile filename of the dictionary file
+	 * @return a {@code 3 x N} array. [0]: unknown test set [1]: training set [2]: known test set
+	 * 
+	 * @see #read(String)
+	 * @see BloomFilter#readWords(String, boolean)
+	 * @see BloomFilter#createCrossValidationDataSet(List)
+	 */
 	public static String[][] readWithValidation(String dictionaryFile)
 	{
 		return BloomFilter.readWords(dictionaryFile, true);
 	}
 	
-	 /**
-     * Prüft ob die Wörter im Bloom Filter vorhanden sind
-     * 
-     * @param words
-     * @param contains
-     * @return
-     */
+	/**
+	 * Counts the number of words which in or not in the bloom filter
+	 * @param words words to check
+	 * @param contains 
+	 * @return contains == true: number of words which are may in the bloom filter <br> contains == false: number of words which are not in the bloom filter
+	 * @see #contains(CharSequence)
+	 */
 	private int containsWords(String[] words, boolean contains)
 	{
 		int counter = 0;
@@ -227,10 +252,9 @@ public class BloomFilter
 	}
 	
 	/**
-     * Fügt die Wörter dem Filter hinzu
-     * 
-     * @param words
-     */
+	 * Adds all given words to the bloom filter
+	 * @param words words to add
+	 */
 	private void addWords(String[] words)
 	{
 		for(String word:words)
@@ -240,12 +264,11 @@ public class BloomFilter
 	}
 	
 	/**
-     * Liest die Wörter aus der Txt Datei und speichert sie
-     * 
-     * @param dictionaryFile
-     * @param crossValidation
-     * @return
-     */
+	 * Reads the words of the given file and saves them in an array
+	 * @param dictionaryFile
+	 * @param crossValidation enable/disable validation
+	 * @return 
+	 */
 	private static String[][] readWords(String dictionaryFile, boolean crossValidation)
 	{
 		Scanner scanner = null;
@@ -295,7 +318,7 @@ public class BloomFilter
 	}
 	
 	/**
-	 * 
+	 * Splits up a list of words into a test set of unknown words (0), a training set (1) and a set of known words (2)
 	 * @param words
 	 * @return [0]: test unknown words<br>[1]: known words<br>[2]: test known words
 	 */
@@ -333,13 +356,15 @@ public class BloomFilter
 		
 		return wordLists;
 	}
-	 /**
-     * Berechnet den Modulo m des Hashcodes und setzt an der entsprechenden Stelle (Hasho mod m) im
-     * BitSet eine 1
-     * 
-     * @param code Der generierte Hashcode
-     * @param filter das Bitset, welches den Bloom-Filter repräsentiert
-     */
+
+	/**
+	 * Calculates the index of the given hashCode and sets the index-th bit of the filter:<br>
+	 * 
+	 * {@code index = |code.asLong mod m|}
+	 * 
+	 * @param code generated hashcode
+	 * @param filter bitset of the word or the bloomfilter itself.
+	 */
 	private void applyHashCodeOnFilter(HashCode code, BitSet filter)
 	{
 
@@ -350,21 +375,21 @@ public class BloomFilter
 		assert(filter.length()<=this.m);
 	}
 	
-	// https://en.wikipedia.org/wiki/Bloom_filter#Optimal_number_of_hash_functions
+	//Source: https://en.wikipedia.org/wiki/Bloom_filter#Optimal_number_of_hash_functions
 	private int optimalFiltersize(int n, double p)
 	{
 		return (int) (-(n*Math.log(p))/(Math.pow(Math.log(2),2)));
 	}
 	
-	// https://en.wikipedia.org/wiki/Bloom_filter#Optimal_number_of_hash_functions
+	//Source: https://en.wikipedia.org/wiki/Bloom_filter#Optimal_number_of_hash_functions
 	private int optimalNumberOfHashfunctions(int m, int n)
 	{
-		return (int) Math.ceil(((m/(double) n)*Math.log(2)));
+		return (int) Math.ceil(((m/(double) n)*Math.log(2))); //Math.ceil is necessary, otherwise it can happen that result is 0
 	}
 	
 	@Override
 	public String toString()
 	{
-		return "n=" + this.n + " p=" + this.p +" k=" + this.k + " m= "+ this.m + " set size = " + this.filter.length(); //+" bitSet: " + this.filter;
+		return "n=" + this.n + " p=" + this.p +" k=" + this.k + " m= "+ this.m + " set size = " + this.filter.length();
 	}
 }
